@@ -109,29 +109,9 @@ essai avec spi sdcard
 using std::max;
 using std::min;
 
-//extern LCD_Handle_t hlcd;
-
 
 extern "C" {
-//int __sysfn_read_key(int *pkey1, int *pkey2){};
-//uint32_t sys_current_ms();
-
-//#define lcd_line_addr(x)	(lcd_framebuffer+LCD_LINE_SIZE*x)		
-
-//extern const uint8_t DM_keyb[];
-//extern const char kb_fct_name[][3];
-
-//extern uint32_t Cnt_ms ; 
-//extern OS_MAILBOX      Mb_Keyboard;
-
 }
-
-
-
-
-// Place variables in SRAM3
-//__attribute__((section(".sram3"))) uint32_t retained_data[1024];
-
 
 
 // ============================================================================
@@ -141,11 +121,7 @@ extern "C" {
 // ============================================================================
 
 // Initialize the screen
-
-//surface Screen((pixword *) lcd_line_addr(0), LCD_W, LCD_H, LCD_SCANLINE, LCD_W);
 surface Screen((pixword *) LCD_GetFramebuffer(), LCD_W, LCD_H, LCD_SCANLINE, LCD_W);
-
-
 
 // Pre-built patterns for shades of grey
 const pattern pattern::black   = pattern(0, 0, 0);
@@ -183,7 +159,6 @@ void mark_dirty(uint row)
 //   Mark a screen range as dirty
 // ----------------------------------------------------------------------------
 {
-
     if (row < LCD_H)
     {
 	#if DM42
@@ -396,7 +371,7 @@ bool load_saved_keymap(cstring name)
             kcfg.write(name, strlen(name));
     }
 
-    file kcfg("config\\keymap.cfg", file::READING);
+    file kcfg("config/keymap.cfg", file::READING);
     if (kcfg.valid())
     {
         kcfg.read(keymap_name, sizeof(keymap_name)-1);
@@ -597,7 +572,7 @@ extern "C" void program_main()
     bool transalpha = false;
 
 
-#if DM42
+
     if (prog_build_id != qspi_build_id)
     {
         msg_box(t24,
@@ -609,7 +584,7 @@ extern "C" void program_main()
         wait_for_key_press();
         return;
     }
-#endif
+
 
 
     // Initialization
@@ -825,10 +800,10 @@ extern "C" void dbu585_main_new()
 // ----------------------------------------------------------------------------
 {
 	char buff[80] = {0};
-    int  key        = 0;
+	int  key        = 0;
 	uint32_t key_tmp, key_p1, key_p2, key_p3, keybdata;
 	uint32_t wt_sleeping = 20;
-    bool transalpha = false;
+	bool transalpha = false;
 	bool key_release = false;
 
 	bool res_init_sram = bkSRAM_Init();
@@ -836,45 +811,47 @@ extern "C" void dbu585_main_new()
 
 // lcd init
 	LCD_Status_t lcd_res = LCD_Sharp_Init(&hlcd, true);
-	SEGGER_RTT_printf(0, "\nLCD status : %s", LCD_status_Desc[lcd_res]);
+	SEGGER_RTT_printf(0, "\nLCD status : %s, add : %08x", LCD_status_Desc[lcd_res], LCD_GetFramebuffer());
 	if (lcd_res != LCD_OK){
 		blink_error(blk_lcd);
 	}
 
-    // Initialization
+	// Initialization
 	program_init();
-    redraw_lcd(true);
-    last_keystroke_time = program::read_time();
+	redraw_lcd(true);
+	last_keystroke_time = program::read_time();
 
-    // Main loop
-    while (true)
-    {
+	// Main loop
+	while (true)
+	{
 // Check power state, and switch off if necessary
 //      power_check(false);
 
-        // Key is ready -> clear auto off timer
-        bool hadKey = false;
+		// Key is ready -> clear auto off timer
+		bool hadKey = false;
+		uint32_t tin = sys_current_ms();
+
+	
+//		program::active_time += tin - last_awake;
 
 		char result = OS_MAILBOX_GetTimed(&Mb_Keyboard, &keybdata, wt_sleeping);
 		if (result == 0)
 		{ // an event keyboard is here
+
+			program::sleeping_time += sys_current_ms() - tin;
+			tin = sys_current_ms();
 			if (0xffffffff == keybdata){		
-	 			ui.draw_message("F1 F6 EXIT : reboot");
+				ui.draw_message("F1 F6 EXIT : reboot");
 				while(1){}
 			}
 			else if (0xfffffffe == keybdata){		
-	 			ui.draw_message("rtc updated by sntp");
-					OS_TASK_Delay(1000);
-
+				ui.draw_message("rtc updated by sntp");
+				OS_TASK_Delay(1000);
 				hadKey = false;
 				key = -1;
 				key_release = false;
-				
-
 			}
 			else {
-
-
 				hadKey = true;
 				key_tmp = keybdata & 0xff;
 				if (key_tmp>100) { // release
@@ -892,7 +869,12 @@ extern "C" void dbu585_main_new()
 //        if (!key_empty())
 //        {
 //            reset_auto_off();
-SEGGER_RTT_printf(0, "\nGot key %08x, %02d, %02d, %02d %s %02d", keybdata, key_p1, key_p2, key_p3, key_release ?"Rl":"--", key );
+SEGGER_RTT_printf(0, "\nkey %02d %02d %02d %03d, %02d, %02d, %02d %s %02d", 
+	keybdata>>24,
+	(keybdata>>16)&0xff,
+	(keybdata>>8)&0xff,
+	keybdata&0xff,
+	key_p1, key_p2, key_p3, key_release ?"Rl":"--", key );
 
           // Check transient alpha mode
 //				||       key == KEY_UP || key == KEY_DOWN;
@@ -909,8 +891,9 @@ SEGGER_RTT_printf(0, "\nGot key %08x, %02d, %02d, %02d %s %02d", keybdata, key_p
             }
         } // end get key event
 		else { // waiting time out
+			program::sleeping_time += wt_sleeping;
 			if (key == 0) 	key = -1;
-// gestion power off / sleeping à faire ici
+// gestion power off / sleeping à faire ici 
 		}
         bool repeating = key > 0
             && sys_timer_active(TIMER0)
@@ -927,7 +910,7 @@ SEGGER_RTT_printf(0, "\nGot key %08x, %02d, %02d, %02d %s %02d", keybdata, key_p
 
         if (key >= 0 && hadKey)
         {
-			snprintf(buff, sizeof(buff), "\n ==> %s %s", 				
+			snprintf(buff, sizeof(buff), " ==> %s %s", 				
 				repeating ?"Rp":"--", 
 				transalpha ?"Ta":"--");
 			SEGGER_RTT_WriteString(0,  buff);
@@ -935,11 +918,11 @@ SEGGER_RTT_printf(0, "\nGot key %08x, %02d, %02d, %02d %s %02d", keybdata, key_p
             record(main, "Handle key %d last %d", key, last_key);
             handle_key(key, repeating, transalpha);
             record(main, "Did key %d last %d", key, last_key);
-
+            program::run_cycles++;
+			program::active_time += sys_current_ms() - tin;
             // Redraw the LCD unless there is some type-ahead
-//            if (key_empty())		original
-//            if (key_p1 == 0)
-            redraw_lcd(false);
+			if (key_empty())		//original
+				redraw_lcd(false);
 
             // Record the last keystroke
             last_keystroke_time = program::read_time();
