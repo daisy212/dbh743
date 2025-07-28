@@ -9,7 +9,6 @@
 #include "stdint.h"
 #include "RTOS.h"
 #include <time.h>
-#include "IP.h"
 #include "SEGGER_RTT.h" // utilisation SEGGER_RTT_printf
 
 
@@ -72,6 +71,12 @@ typedef unsigned int uint;
 #define SD_Card_Pin GPIO_PIN_4
 #define SD_Card_GPIO_Port GPIOD
 
+#define COL_1_EXTI_IRQn EXTI0_IRQn
+#define COL_2_EXTI_IRQn EXTI1_IRQn
+#define COL_3_EXTI_IRQn EXTI2_IRQn
+#define COL_4_EXTI_IRQn EXTI3_IRQn
+#define COL_5_EXTI_IRQn EXTI4_IRQn
+#define COL_6_EXTI_IRQn EXTI9_5_IRQn
 
 
 
@@ -81,13 +86,45 @@ typedef unsigned int uint;
 
 #endif // db_h743
 
-#define BKPSRAMMAGIC	(0x11d23346)
+#define BKPSRAMMAGIC (0x11d23346)
 
-extern OS_MAILBOX      	Mb_Keyboard;
-extern OS_EVENT			_EV_KEYB;
-extern uint32_t 		Cnt_ms ; 
+extern OS_MAILBOX       Mb_Keyboard;
+extern OS_EVENT         _EV_KEYB;
+extern uint32_t      Cnt_ms ; 
 
-extern uint64_t	scrut_last;
+extern uint64_t   scrut_last;
+
+
+typedef struct {
+   bool sys;
+   union {
+      uint32_t  keybdata_u32;
+      struct {
+         uint8_t key3;
+         uint8_t key2;
+         uint8_t key1;
+         bool released;
+         uint8_t key;
+      }keys;
+   };
+} st_key_data;
+
+typedef union {
+   uint32_t  keybdata_u32;
+   struct {
+      bool zeroval;
+      int key3 :7;
+      int key2 :7;
+      int key1 :7;
+      bool released;
+      int key :9;
+   };
+   struct {
+      bool sys;
+      int d_sys :31;
+   };
+} st_key_data1;
+
 
 
 
@@ -101,8 +138,14 @@ typedef enum {
 
 
 
-/* Gestion clavier
-*/
+
+
+
+
+
+
+
+
 extern const uint8_t DM_keyb[];
 extern const char kb_fct_name[][3];
 
@@ -113,109 +156,109 @@ extern const char kb_fct_name[][3];
 #define KB_MAX_KEY 4
 #define KB_SHIFT_SCRUT 3
 
-#define KB_SCRUT_PERIOD		(15)
-#define KB_REPEAT_PERIOD	(1500)
-#define KB_REPEAT_COUNT		(KB_REPEAT_PERIOD/KB_SCRUT_PERIOD+1)
-#define KB_VALID_COUNT		(3)
+#define KB_SCRUT_PERIOD    (15)
+#define KB_REPEAT_PERIOD   (1500)
+#define KB_REPEAT_COUNT    (KB_REPEAT_PERIOD/KB_SCRUT_PERIOD+1)
+#define KB_VALID_COUNT     (3)
 
-#define KB_DB_FIRST_REPEAT	(1000)
-#define KB_DB_FIRST_PERIOD	(100)
+#define KB_DB_FIRST_REPEAT (1000)
+#define KB_DB_FIRST_PERIOD (100)
 
 
 
 #define EV_KB_key 1
 
 
-#define KB_SCRUT_KEY(x)		((x>0)&&(x<i_key_last)?((uint64_t)1<<(uint64_t)(x+KB_SHIFT_SCRUT)):((uint64_t)0))
-#define KB_RD_KEY(x)		(((x>0)&&(x<9999))?((x%100)%i_key_last):0)
-#define KB_RD_FCT(x)		(((x>0)&&(x<9999))?((x/100)%7):0)
-#define KB_CHAR_ROW_KEY(x)	(((x>0)&&(x<9999))?((char)('A'+((x-1)%100)/6)):((char)'-'))
-#define KB_CHAR_COL_KEY(x)	(((x>0)&&(x<9999))?((char)('1'+((x-1)%100)%6)):((char)'-'))
-//#define KB_STRING_FCT_KEY(x)	((char*)(&kb_fct_name[KB_RD_FCT(x)][3]))
-#define KB_FREE42_KEY(x)	((uint8_t)(DM_keyb[KB_RD_KEY(x)]))
-#define KB_FCT_PRESS		1
-#define KB_FCT_RELEASE		2
-#define KB_FCT_REPEAT		3
-#define KB_FCT_SHIFT		4
-#define KB_FCT_SHIFT_REL	5
-#define KB_FCT_SHIFT_REPEAT	6
+#define KB_SCRUT_KEY(x)    ((x>0)&&(x<i_key_last)?((uint64_t)1<<(uint64_t)(x+KB_SHIFT_SCRUT)):((uint64_t)0))
+#define KB_RD_KEY(x)    (((x>0)&&(x<9999))?((x%100)%i_key_last):0)
+#define KB_RD_FCT(x)    (((x>0)&&(x<9999))?((x/100)%7):0)
+#define KB_CHAR_ROW_KEY(x) (((x>0)&&(x<9999))?((char)('A'+((x-1)%100)/6)):((char)'-'))
+#define KB_CHAR_COL_KEY(x) (((x>0)&&(x<9999))?((char)('1'+((x-1)%100)%6)):((char)'-'))
+//#define KB_STRING_FCT_KEY(x)   ((char*)(&kb_fct_name[KB_RD_FCT(x)][3]))
+#define KB_FREE42_KEY(x)   ((uint8_t)(DM_keyb[KB_RD_KEY(x)]))
+#define KB_FCT_PRESS    1
+#define KB_FCT_RELEASE     2
+#define KB_FCT_REPEAT      3
+#define KB_FCT_SHIFT    4
+#define KB_FCT_SHIFT_REL   5
+#define KB_FCT_SHIFT_REPEAT   6
 
 enum key_map1
 // keys name definition
-{	// 
-	kXX = 0,
-	kA1,
-	kA2,
-	kA3,
-	kA4,
-	kA5,
-	kA6,
-	kB1,
-	kB2,
-	kB3,
-	kB4,
-	kB5,
-	kB6,
-	kC1,
-	kC2,
-	kC3,
-	kC4,
-	kC5,
-	kC6,
-	kD1,
-	kD2,
-	kD3,
-	kD4,
-	kD5,
-	kD6,
-	kE1,
-	kE2,
-	kE3,
-	kE4,
-	kE5,
-	kE6,
-	kF1,
-	kF2,
-	kF3,
-	kF4,
-	kF5,
-	kF6,
-	kG1,
-	kG2,
-	kG3,
-	kG4,
-	kG5,
-	kG6,
-	kH1,
-	kH2,
-	kH3,
-	kH4,
-	kH5,
-	kH6,
+{  // 
+   kXX = 0,
+   kA1,
+   kA2,
+   kA3,
+   kA4,
+   kA5,
+   kA6,
+   kB1,
+   kB2,
+   kB3,
+   kB4,
+   kB5,
+   kB6,
+   kC1,
+   kC2,
+   kC3,
+   kC4,
+   kC5,
+   kC6,
+   kD1,
+   kD2,
+   kD3,
+   kD4,
+   kD5,
+   kD6,
+   kE1,
+   kE2,
+   kE3,
+   kE4,
+   kE5,
+   kE6,
+   kF1,
+   kF2,
+   kF3,
+   kF4,
+   kF5,
+   kF6,
+   kG1,
+   kG2,
+   kG3,
+   kG4,
+   kG5,
+   kG6,
+   kH1,
+   kH2,
+   kH3,
+   kH4,
+   kH5,
+   kH6,
 #if KB_ROW==9
-	kI1,
-	kI2,
-	kI3,
-	kI4,
-	kI5,
-	kI6,
+   kI1,
+   kI2,
+   kI3,
+   kI4,
+   kI5,
+   kI6,
 #endif
-	i_key_last,
+   i_key_last,
 };
 
 
 
-typedef	struct {
-	GPIO_TypeDef * gpio;
-	uint32_t pin;
+typedef  struct {
+   GPIO_TypeDef * gpio;
+   uint32_t pin;
 }
 st_Pin;
 
-typedef	struct {
-	uint8_t		key;
-	uint32_t    count;
-	bool	k_act;
-	bool	k_long;
+typedef  struct {
+   uint8_t     key;
+   uint32_t    count;
+   bool  k_act;
+   bool  k_long;
 }
 st_Key;
 
@@ -292,12 +335,6 @@ bool      ui_charging();        // On USB power
 void      ui_start_buzzer(uint frequency);
 void      ui_stop_buzzer();
 void      ui_draw_message(const char *hdr);
-/*
-int       ui_wrap_io(file_sel_fn callback,
-                     const char *path,
-                     void       *data,
-                     bool        writing);
-*/
 void      ui_load_keymap(const char *path);
 
 
@@ -318,7 +355,7 @@ void bkSRAM_ReadVariable(uint16_t read_adress, uint32_t* read_data);
 void bkSRAM_WriteVariable(uint16_t write_adress,uint32_t vall);
 
 
-void ntp_convert_to_local_time_TZ(const IP_NTP_TIMESTAMP* ntp_time,const char* tz_name, local_time_t* local_time);
+//void ntp_convert_to_local_time_TZ(const IP_NTP_TIMESTAMP* ntp_time,const char* tz_name, local_time_t* local_time);
 void set_rtc(local_time_t* local_time);
 
 

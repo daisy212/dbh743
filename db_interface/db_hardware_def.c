@@ -1,36 +1,34 @@
+/*
 
+undefined symbol hrtc referenced by symbol rtc_read (section .text.rtc_read in file db_hardware_def.o)
 
+*/
 #include "dmcp.h"
 #include "db_hardware_def.h"
 #include "bsp.h"
 #include "string.h"
 
 #include "SEGGER_RTT.h"
-#include "IP.h"
-
-
+//#include "IP.h"
 #include <stdio.h>
-
-
 #include "LS027B7DH01.h"
 
-
 OS_MAILBOX      Mb_Keyboard;
-OS_EVENT	_EV_KEYB;
-OS_TIMER	T_LcdVcom;
-OS_TIMER	T_Cnt_ms;
+//OS_EVENT  _EV_KEYB;
+OS_TIMER T_LcdVcom;
+OS_TIMER T_Cnt_ms;
 
 
-uint32_t Cnt_ms ; 		// à éviter
-uint64_t	scrut_last;
+uint32_t Cnt_ms ;       // à éviter
+uint64_t scrut_last;
 bool usb_connected;
-
+int aa;  // for compiling tests.cc
 
 
 const uint32_t blink_seq_def[blk_last][10]={
-	{500,500,0},
-	{100,400,100,400,0},
-	{500,500,0},
+   {500,500,0},
+   {100,400,100,400,0},
+   {500,500,0},
 };
 
 uint32_t blink_seq_nb = 0;
@@ -39,34 +37,34 @@ uint32_t blink_cnt=0;
 
 void Ti_cb_Count_ms(void)
 {
-  	OS_TIMER_Restart(&T_Cnt_ms);
-	Cnt_ms += 2;
+   OS_TIMER_Restart(&T_Cnt_ms);
+   Cnt_ms += 2;
 
-	if (blink_cnt <= 10){ BSP_SetLED(0);}
+   if (blink_cnt <= 10){ BSP_SetLED(0);}
 
-	if ((blink_cnt % 1000) == blink_seq_def[blink_seq_nb][blink_seq]){
+   if ((blink_cnt % 1000) == blink_seq_def[blink_seq_nb][blink_seq]){
 
-		BSP_ToggleLED(0);	
-		blink_seq++;
-		if (blink_seq_def[blink_seq_nb][blink_seq] == 0){blink_cnt = 0; blink_seq = 0;}
-	}
-	blink_cnt += 2;
+      BSP_ToggleLED(0); 
+      blink_seq++;
+      if (blink_seq_def[blink_seq_nb][blink_seq] == 0){blink_cnt = 0; blink_seq = 0;}
+   }
+   blink_cnt += 2;
 }
 
 
 void blink_error(uint32_t errnb){
-	if (errnb < blk_last){
-		blink_seq_nb = errnb;
-		blink_seq=0;
-		blink_cnt=0;
-	}
+   if (errnb < blk_last){
+      blink_seq_nb = errnb;
+      blink_seq=0;
+      blink_cnt=0;
+   }
 }
 
 
 void Error_Handler(void){
-	while(1){
-		OS_TASK_Delay(50);
-	}
+   while(1){
+      OS_TASK_Delay(50);
+   }
 }
 
 
@@ -74,24 +72,24 @@ void Error_Handler(void){
 
 void rtc_read(tm_t * tm, dt_t *dt)
 {
-    time_t				now;
-    struct tm			utm;
-    struct timeval		tv;
+    time_t           now;
+    struct tm        utm;
+    struct timeval      tv;
 
 /*  utilisation des fonction std avec  __SEGGER_RTL_X_get_time_of_day() déclarée
-			corruption mémoire ???
+         corruption mémoire ???
 
-	time(&now);
+   time(&now);
     localtime_r(&now, &utm);
     gettimeofday(&tv, NULL);
 */
-	RTC_TimeTypeDef		time_rtc;
-	RTC_DateTypeDef		date_rtc;
+   RTC_TimeTypeDef      time_rtc;
+   RTC_DateTypeDef      date_rtc;
 // toujours ensemble !!!!!!
-	HAL_RTC_GetTime(&hrtc, &time_rtc, RTC_FORMAT_BIN);
-	HAL_RTC_GetDate(&hrtc, &date_rtc, RTC_FORMAT_BIN);
-	uint32_t prescaler = hrtc.Init.SynchPrediv + 1;
-	uint32_t msec = 1000 - ((time_rtc.SubSeconds * 1000) / prescaler);
+   HAL_RTC_GetTime(&hrtc, &time_rtc, RTC_FORMAT_BIN);
+   HAL_RTC_GetDate(&hrtc, &date_rtc, RTC_FORMAT_BIN);
+   uint32_t prescaler = hrtc.Init.SynchPrediv + 1;
+   uint32_t msec = 1000 - ((time_rtc.SubSeconds * 1000) / prescaler);
 
 // Fill the struct tm utm
     utm.tm_sec  = time_rtc.Seconds;
@@ -102,7 +100,7 @@ void rtc_read(tm_t * tm, dt_t *dt)
     utm.tm_year = date_rtc.Year + 100;  // struct tm year = years since 1900 (assuming 2000-based RTC)
     utm.tm_wday = date_rtc.WeekDay % 7; // tm_wday: Sunday = 0, RTC: Monday = 1
 
-//	time_t epoch_time = mktime(&utm);
+// time_t epoch_time = mktime(&utm);
 
 
 // result setting
@@ -138,7 +136,7 @@ void rtc_write(tm_t * tm, dt_t *dt)
 
 void      ui_refresh(void){
 
-	LCD_UpdateDisplay(&hlcd);
+   LCD_UpdateDisplay(&hlcd);
 
 
 }
@@ -153,7 +151,7 @@ void      ui_push_key(int k){
 
 
 void      ui_ms_sleep(uint ms_delay){
-	OS_TASK_Delay_us(ms_delay*1000);
+   OS_TASK_Delay_us(ms_delay*1000);
 }
 
 
@@ -165,75 +163,62 @@ int       ui_file_selector(const char *title,
                            void       *data,
                            int         disp_new,
                            int         overwrite_check){
-						   
-	char buff[80];
-	snprintf(buff, sizeof(buff), "\nui_file selector : %s, %s, %s", title, base_dir, ext);
-	SEGGER_RTT_WriteString(0,  buff);
-}						   
-				   
+                     
+   char buff[80];
+   snprintf(buff, sizeof(buff), "\nui_file selector : %s, %s, %s", title, base_dir, ext);
+   SEGGER_RTT_WriteString(0,  buff);
+}                    
+               
 const char cmd1[][16] = {"nothing", "state", "last"};
-uint32_t get_index(	const char *name){
-	for (uint32_t ii = 0; ii < sizeof(cmd1)/ sizeof(cmd1[0]); ii++){
-		if (strncmp(name, cmd1[ii], sizeof(*name)) == 0 ) return ii;
-	}
-	return 0;
-}					   
+uint32_t get_index(  const char *name){
+   for (uint32_t ii = 0; ii < sizeof(cmd1)/ sizeof(cmd1[0]); ii++){
+      if (strncmp(name, cmd1[ii], sizeof(*name)) == 0 ) return ii;
+   }
+   return 0;
+}                 
 
 void      ui_save_setting(const char *name, const char *value){
-	char buff[60];
-	uint32_t index= get_index(name);
-	if (index != 0) 
-		bkSRAM_WriteString( index, (char *)value, sizeof(value));
+   char buff[60];
+   uint32_t index= get_index(name);
+   if (index != 0) 
+      bkSRAM_WriteString( index, (char *)value, sizeof(value));
 
-	snprintf(buff, sizeof(buff), "\nui_save_setting : %s, %s", cmd1[index], value);
-	SEGGER_RTT_WriteString(0,  buff);
+   snprintf(buff, sizeof(buff), "\nui_save_setting : %s, %s", cmd1[index], value);
+   SEGGER_RTT_WriteString(0,  buff);
 }
 
 
 size_t    ui_read_setting(const char *name, char *value, size_t maxlen){
-	char buff[60];
-	uint32_t index= get_index(name);
-	if (index != 0) {
-		bkSRAM_ReadString(1, value, maxlen);
-		return sizeof(value);
-	}
-	return 0;
+   char buff[60];
+   uint32_t index= get_index(name);
+   if (index != 0) {
+      bkSRAM_ReadString(1, value, maxlen);
+      return sizeof(value);
+   }
+   return 0;
 }
 
 
 uint      ui_battery()         // Between 0 and 1000
 {
-	return 1000;
+   return 1000;
 }
 
 bool      ui_charging()        // On USB power
 {
-	return usb_connected;
+   return usb_connected;
 }
 
 void      ui_start_buzzer(uint frequency){}
 void      ui_stop_buzzer(){}
 //void      ui_draw_message(const char *hdr){}
 
-/*
-int       ui_wrap_io(file_sel_fn callback,
-                     const char *path,
-                     void       *data,
-                     bool        writing){
-	uint32_t *pdata;				 
-	(*	callback)(			path,  path, data);
-					 
-//typedef int (*file_sel_fn)(const char *fpath, const char *fname, void *data);
-// à confirmer
-
-}
-*/
 
 void      ui_load_keymap(const char *path)
 {
-					 while(1){}
-					 
-					 }
+                while(1){}
+                
+                }
 
 
 int runner_get_key(int *repeat)
@@ -246,55 +231,55 @@ int runner_get_key(int *repeat)
 
 void bkSRAM_ReadString(uint16_t read_adress, char* read_data, uint32_t length)
 {
-	uint32_t siz = length;
-	if (length >256) siz = 256;
-	if ((read_adress >10)||(read_adress==0)) 
-		return;
-	HAL_PWR_EnableBkUpAccess();
-	__HAL_RCC_BKPRAM_CLK_ENABLE();
-//	char * pstring =  (char*) (0x38800000 + read_adress*0x100);
-	memcpy( read_data, (void *)(0x38800000 + read_adress*0x100), siz);
+   uint32_t siz = length;
+   if (length >256) siz = 256;
+   if ((read_adress >10)||(read_adress==0)) 
+      return;
+   HAL_PWR_EnableBkUpAccess();
+   __HAL_RCC_BKPRAM_CLK_ENABLE();
+// char * pstring =  (char*) (0x38800000 + read_adress*0x100);
+   memcpy( read_data, (void *)(0x38800000 + read_adress*0x100), siz);
 
-	__HAL_RCC_BKPRAM_CLK_DISABLE();
-	HAL_PWR_DisableBkUpAccess();
+   __HAL_RCC_BKPRAM_CLK_DISABLE();
+   HAL_PWR_DisableBkUpAccess();
 }
 
 void bkSRAM_WriteString(uint16_t read_adress, char* write_data, uint32_t length)
 {
-	uint32_t siz = length;
-	if (length >256) siz = 256;
-	if ((read_adress >10)||(read_adress==0)) 
-		return;
-	HAL_PWR_EnableBkUpAccess();
-	__HAL_RCC_BKPRAM_CLK_ENABLE();
-//	char * pstring =  (char*) (0x38800000 + read_adress*0x100);
-	memcpy( (void*) (0x38800000 + read_adress*0x100), write_data, siz);
-	__HAL_RCC_BKPRAM_CLK_DISABLE();
-	HAL_PWR_DisableBkUpAccess();
+   uint32_t siz = length;
+   if (length >256) siz = 256;
+   if ((read_adress >10)||(read_adress==0)) 
+      return;
+   HAL_PWR_EnableBkUpAccess();
+   __HAL_RCC_BKPRAM_CLK_ENABLE();
+// char * pstring =  (char*) (0x38800000 + read_adress*0x100);
+   memcpy( (void*) (0x38800000 + read_adress*0x100), write_data, siz);
+   __HAL_RCC_BKPRAM_CLK_DISABLE();
+   HAL_PWR_DisableBkUpAccess();
 }
 
 void bkSRAM_ReadVariable(uint16_t read_adress, uint32_t* read_data)
 {
-	    HAL_PWR_EnableBkUpAccess();
-	    __HAL_RCC_BKPRAM_CLK_ENABLE();
-	    *read_data =  *(uint32_t*) (0x38800000 + read_adress);
+       HAL_PWR_EnableBkUpAccess();
+       __HAL_RCC_BKPRAM_CLK_ENABLE();
+       *read_data =  *(uint32_t*) (0x38800000 + read_adress);
         __HAL_RCC_BKPRAM_CLK_DISABLE();
         HAL_PWR_DisableBkUpAccess();
 }
 
 void bkSRAM_WriteVariable(uint16_t write_adress,uint32_t vall)
 {
-     	  HAL_PWR_EnableBkUpAccess();
-	      __HAL_RCC_BKPRAM_CLK_ENABLE();
-	      *(__IO uint32_t*)(0x38800000 + write_adress) = vall ;
-	       SCB_CleanDCache_by_Addr((uint32_t *)(0x38800000 + write_adress),8);
-	      __HAL_RCC_BKPRAM_CLK_DISABLE();
-	      HAL_PWR_DisableBkUpAccess();
+        HAL_PWR_EnableBkUpAccess();
+         __HAL_RCC_BKPRAM_CLK_ENABLE();
+         *(__IO uint32_t*)(0x38800000 + write_adress) = vall ;
+          SCB_CleanDCache_by_Addr((uint32_t *)(0x38800000 + write_adress),8);
+         __HAL_RCC_BKPRAM_CLK_DISABLE();
+         HAL_PWR_DisableBkUpAccess();
 }
 
 bool bkSRAM_Init(void)
 {
-	HAL_FLASH_Unlock();
+   HAL_FLASH_Unlock();
     /*DBP : Enable access to Backup domain */
     HAL_PWR_EnableBkUpAccess();
     __HAL_RCC_BKPRAM_CLK_ENABLE();
@@ -308,18 +293,18 @@ bool bkSRAM_Init(void)
     HAL_FLASH_Lock();
 
 
-	uint32_t magic_check = 0;
-	bkSRAM_ReadVariable(0, &magic_check);
-	if (BKPSRAMMAGIC != magic_check){
+   uint32_t magic_check = 0;
+   bkSRAM_ReadVariable(0, &magic_check);
+   if (BKPSRAMMAGIC != magic_check){
 // init backup sram, 
-		char buff[256] = {0};
-		bkSRAM_WriteVariable( 0, BKPSRAMMAGIC);
-		snprintf(buff, sizeof(buff), "state\\State1.48s");
-		bkSRAM_WriteString(1, buff, sizeof(buff));
+      char buff[256] = {0};
+      bkSRAM_WriteVariable( 0, BKPSRAMMAGIC);
+      snprintf(buff, sizeof(buff), "state\\State1.48s");
+      bkSRAM_WriteString(1, buff, sizeof(buff));
 // ajouter la timezone
-		return 0;
-	}
-	return 1;
+      return 0;
+   }
+   return 1;
 }
 
 /******************************************************************************
@@ -539,7 +524,7 @@ static void apply_timezone_offset(local_time_t* time_struct, const timezone_info
         if (time_struct->weekday < 0) time_struct->weekday += 7;
     }
 }
-
+/*
 // Main conversion function
 void ntp_convert_to_local_time(const IP_NTP_TIMESTAMP* ntp_time, uint8_t tz_index, local_time_t* local_time) {
     uint32_t unix_time;
@@ -609,7 +594,7 @@ void print_ntp_time_info(const IP_NTP_TIMESTAMP* ntp_time, uint8_t tz_index) {
         }
     }
 }
-
+*/
 void print_timezone_list(void) {
     SEGGER_RTT_printf(0, "\nAvailable Timezones:\n");
     SEGGER_RTT_printf(0, "===================\n");
@@ -641,20 +626,20 @@ int find_timezone_index(const char* tz_name) {
 }
 
 
-
+/*
 void ntp_convert_to_local_time_TZ(const IP_NTP_TIMESTAMP* ntp_time,const char* tz_name, local_time_t* local_time) {
 
-	int tz_index = find_timezone_index(tz_name);
-	ntp_convert_to_local_time( ntp_time, tz_index, local_time) ;
+   int tz_index = find_timezone_index(tz_name);
+   ntp_convert_to_local_time( ntp_time, tz_index, local_time) ;
 
 }
-
+*/
 
 void set_rtc(local_time_t* local_time){
 
 
-	RTC_TimeTypeDef		time_rtc;
-	RTC_DateTypeDef		date_rtc;
+   RTC_TimeTypeDef      time_rtc;
+   RTC_DateTypeDef      date_rtc;
 time_rtc.Hours = local_time->hour;
 time_rtc.Minutes = local_time->minute;
 time_rtc.Seconds = local_time->second;
@@ -678,9 +663,9 @@ date_rtc.Year = local_time->year-2000;
 // toujours ensemble !!!!!!
 HAL_StatusTypeDef res;
 HAL_PWR_EnableBkUpAccess();
-	res = HAL_RTC_SetDate(&hrtc, &date_rtc, RTC_FORMAT_BIN);
-	res = HAL_RTC_SetTime(&hrtc, &time_rtc, RTC_FORMAT_BIN);
+   res = HAL_RTC_SetDate(&hrtc, &date_rtc, RTC_FORMAT_BIN);
+   res = HAL_RTC_SetTime(&hrtc, &time_rtc, RTC_FORMAT_BIN);
 
-	
+   
 }
 
